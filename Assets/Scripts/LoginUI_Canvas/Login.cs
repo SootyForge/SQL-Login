@@ -22,20 +22,23 @@ namespace LoginUI_Canvas
         public GameObject panel2NewAcc; // !!! MAKE A TOOLTIP PANEL FOR 'email already exists' !!!
         public GameObject panel3ForgotPass;
         public GameObject panel4RecoveryCode;
-        public bool showNewAcc, showLostPass, showRecCode;
+        public GameObject panel5NewPass;
 
-        // p = panel | 1 = Login | 2 = Create | 3 = Lost Password | 4 = Recovery Code
+        public bool showNewAcc, showLostPass, showRecCode, showNewPass;
+
+        // p = panel | 1 = Login | 2 = Create | 3 = Lost Password | 4 = Recovery Code | 5 = New Password
         [Header("Panel Input Fields")]
         public InputField p1fieldUsername;
         public InputField p1fieldPassword,
                           p2fieldUsername, p2fieldPassword, p2fieldConfirmPassword, p2fieldEmail,
                           p3fieldEmail,
-                          p4recoveryCode;
+                          p4fieldRecoveryCode,
+                          p5fieldNewPassword, p5fieldConfirmPassword;
 
         // For random recovery code.
         private static System.Random random = new System.Random();
         public string username;
-        public string code;
+        public string password, email, code;
 
         #endregion
 
@@ -48,11 +51,11 @@ namespace LoginUI_Canvas
         }
         
         // Interactive elements on the Main Login Menu.
-        #region Panel 1 (Main Login Menu)
+        #region Panel 1 (Main Login Menu) Toggles
         
         // Where we open and close the Create New Account menu.
         #region Toggle Create New Account (Panel 2)
-
+        
         // Where we execute NewAccToggle().
         public void BTN_ToggleNewAcc()
         {
@@ -155,39 +158,41 @@ namespace LoginUI_Canvas
         #region Panel 3 (Forgot Password Menu)
         public void BTN_SendEmail()
         {
-            RecoveryCodeToggle();
-        }
-
-        bool RecoveryCodeToggle()
-        {
-            // !!! MAKE IT DO THIS ONLY IF SUCCESSFUL !!!
-            if (!showRecCode)
-            {
-                // Open the Recovery Code Menu (and hide the Forgot Password Menu).
-                showRecCode = true;
-                panel4RecoveryCode.SetActive(true);
-                LostPassToggle();
-
-                // Run 'SendEmail()'.
-                SendEmail();
-                if (p4recoveryCode == null)
-                {
-                    p4recoveryCode = GameObject.Find("4 InputField (Code)").GetComponent<InputField>();
-                    print("Panel 4 Components");
-                }
-                return true;
-            }
-            else
-            {
-                showRecCode = false;
-                panel4RecoveryCode.SetActive(false);
-                return false;
-            }
+            email = p3fieldEmail.text;
+            StartCoroutine(GetUser(email));
         }
         #endregion
 
         // Where we get an emailed recovery code.
         #region Panel 4 (Recovery Code Menu) / Email Management
+        public void BTN_SubmitCode()
+        {
+            NewPassToggle();
+        }
+
+        bool NewPassToggle()
+        {
+            if (p4fieldRecoveryCode.text == code && !showNewPass)
+            {
+                showNewPass = true;
+                panel5NewPass.SetActive(true);
+
+                if (p5fieldNewPassword == null && p5fieldConfirmPassword == null)
+                {
+                    p5fieldNewPassword = GameObject.Find("5 InputField (New)").GetComponent<InputField>();
+                    p5fieldConfirmPassword = GameObject.Find("5 InputField (Re-enter)").GetComponent<InputField>();
+                    print("Panel 5 Components");
+                }
+                return true;
+            }
+            else
+            {
+                showNewPass = false;
+                panel5NewPass.SetActive(false);
+                return false;
+            }
+        }
+        
         void SendEmail()
         {
             // Give us a random string as the code ( '(8)' is an 8 character code).
@@ -203,7 +208,7 @@ namespace LoginUI_Canvas
             // Topic.
             mail.Subject = "SQueaL System User Reset - Jett";
             // Message.
-            mail.Body = "Hello," + username + "\nReset your Accout using this code: " + code;
+            mail.Body = "Hello, " + username + "\nReset your Accout using this code: " + code;
 
             // Used to access and use Google to send emails.
             SmtpClient smtpServer = new SmtpClient("smtp.gmail.com");
@@ -230,13 +235,13 @@ namespace LoginUI_Canvas
         IEnumerator GetUser(string _email)
         {
             //Link to PHP
-            string createUserURL = "http://localhost/squealsystem/CheckUser.php";
+            string getUserURL = "http://localhost/squealsystem/CheckUser.php";
 
             //Info to send to the POST variable in PHP
             WWWForm getUserForm = new WWWForm();
             getUserForm.AddField("emailPost", _email);
 
-            WWW www = new WWW(createUserURL, getUserForm);
+            WWW www = new WWW(getUserURL, getUserForm);
 
             yield return www;
             //createAccToolTip = www.text;
@@ -244,6 +249,59 @@ namespace LoginUI_Canvas
             if (www.text != "No User")
             {
                 username = www.text;
+            }
+
+            if (username != "")
+            {
+                // Open the Recovery Code Menu (and hide the Forgot Password Menu).
+                showRecCode = true;
+                panel4RecoveryCode.SetActive(true);
+                LostPassToggle();
+
+                // Run 'SendEmail()'.
+                SendEmail();
+                if (p4fieldRecoveryCode == null)
+                {
+                    p4fieldRecoveryCode = GameObject.Find("4 InputField (Code)").GetComponent<InputField>();
+                    print("Panel 4 Components");
+                }
+            }
+        }
+        #endregion
+
+        #region Panel 5 (Reset Password)
+        public void BTN_NewPassword()
+        {
+            StartCoroutine(ResetPassword(p5fieldNewPassword.text, email));
+        }
+
+        IEnumerator ResetPassword(string _password, string _email)
+        {
+            if (p5fieldNewPassword.text == p5fieldConfirmPassword.text)
+            {
+                password = p5fieldNewPassword.text;
+
+                //Link to PHP
+                string newPasswordURL = "http://localhost/squealsystem/UpdatePassword.php";
+
+                //Info to send to the POST variable in PHP
+                WWWForm getPasswordForm = new WWWForm();
+                getPasswordForm.AddField("passwordPost", _password);
+                getPasswordForm.AddField("emailPost", _email);
+
+                WWW www = new WWW(newPasswordURL, getPasswordForm);
+
+                yield return www;
+                //createAccToolTip = www.text;
+                Debug.Log(www.text);
+
+                if (www.text == "Password Changed")
+                {
+                    password = www.text;
+                    email = null;
+                    panel5NewPass.SetActive(false);
+                    showNewPass = false;
+                }
             }
         }
         #endregion
