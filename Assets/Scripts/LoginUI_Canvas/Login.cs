@@ -278,7 +278,7 @@ namespace LoginUI_Canvas
                     RecCodeToggle();
 
                     // Run 'SendEmail()'.
-                    SendEmail();
+                    SendEmail(_email);
                 }
             }
             
@@ -286,7 +286,7 @@ namespace LoginUI_Canvas
             #region Email Management
                 
                 // Where we email a recovery code generated with 'RandomString()'.
-                void SendEmail()
+                void SendEmail(string _email)
                 {
                     // Give us a random string as the code ( '(8)' is an 8 character code).
                     code = RandomString(8);
@@ -295,7 +295,7 @@ namespace LoginUI_Canvas
                     MailMessage mail = new MailMessage();
                     MailAddress ourEmail = new MailAddress("sqlunityclasssydney@gmail.com", "SQueaL 2019");
                     // Sent To.
-                    mail.To.Add(p3fieldEmail.text);
+                    mail.To.Add(_email);
                     // Sent From.
                     mail.From = ourEmail;
                     // Topic.
